@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Bionime Station Infomation</title>
+		
+		<link rel="stylesheet" href="/webjars/bootstrap/3.3.7/css/bootstrap.css">
+		<link rel="stylesheet" href="/webjars/font-awesome/4.7.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="/css/style.css">
+		<link rel="stylesheet" href="/css/pace/themes/blue/pace-theme-loading-bar.css"/>
+	    <link rel="stylesheet" href="/css/toastr/toastr.min.css">
+		<link rel="stylesheet" href="/css/sweetalert2/sweetalert2.min.css">
+		
+		<script type="text/javascript" src="/js/beforeInit.js"></script>
+		<script type="text/javascript" src="/webjars/jquery/2.1.1/jquery.js"></script>
+		<script type="text/javascript" src="/webjars/bootstrap/3.3.7/js/bootstrap.js"></script>
+		<script type="text/javascript" src="/js/moment/moment.min.js"></script>
+		<script type="text/javascript" src="/js/jqueryform/jquery.form.min.js"></script>
+		<script type="text/javascript" src="/js/javaScriptTemplates/tmpl.min.js"></script>
+		<script type="text/javascript" src="/js/pace/pace.min.js"></script>
+		<script type="text/javascript" src="/js/toastr/toastr.min.js"></script>
+		<script type="text/javascript" src="/js/sweetalert2/sweetalert2.min.js"></script>
+	    <script type="text/javascript" src="/js/generalFunction.js"></script>
+		
+		<script th:inline="javascript">
+			$(document).ready(function () {
+				var stationId = /*[[${stationId}]]*/;
+				ajaxPromise('/api/station/' + stationId, 'GET', null).then(function(response) {
+					var data = response.data;
+					$("#name").val(data.name);
+					return ajaxPromise('/api/employee/condition?stationId=' + stationId, 'GET', null);
+				}).then(function(response) {
+					var data = response.data;
+					$(".empTbody").html("");
+	   		    	$(".empTbody").append(tmpl("empTmpl", data));
+				}, function(error) {
+					console.log('reject.' + error);
+				});
+			
+				$(".saveStationBtn").click(function() {
+					if ("" != $("#name").val().trim()) {
+						ajaxPromise('/api/station/' + stationId, 'PUT', {id: stationId, name:$("#name").val()}).then(function(response) {
+							eipToast({message: '儲存成功', method: 'success'});
+						}, function(error) {
+							console.log('reject.' + error);
+						});
+					} else {
+						eipToast('未輸入站點名稱');
+					}
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<form method="post" class="form-horizontal">
+            <div class="middle-box">
+            	<div class="ibox-content">
+	            	<div class="row">
+	            		<div class="col-md-12">
+							<button type="button" class="btn btn-sm col-md-6" onclick="window.location.href='/stationList'">返回</button>
+							<button type="button" class="saveStationBtn btn btn-success btn-sm col-md-6">儲存</button>
+						</div>
+						<div class="col-md-12 m-t-sm">
+							<div class="form-group">
+								<label class="col-md-4 control-label">站點名稱</label>
+								<div class="col-md-8">
+									<input type="text" class="form-control" id="name" name="name" >
+								</div>
+							</div>
+							<label class="col-md-12 text-left m-t-sm">站點護士烈表</label>
+							<div class="col-md-12">
+								<div class="table-responsive m-t-sm">
+									<table class="table table-striped table-sm">
+										<thead>
+											<tr>
+												<th>員工編號</th>
+												<th>加入時間</th>
+											</tr>
+										</thead>
+										<tbody class="empTbody"></tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+            </div>
+            
+            <script type="text/x-tmpl" id="empTmpl">
+			{% for (var i = 0, emp; emp=o[i]; i++) { %}
+			<tr>
+				<td>{%=emp.identifier%}</td>
+				<td>{%=moment(emp.updateTime).format('YYYY/MM/DD HH:mm:ss')%}</td>
+			</tr>
+			{% } %}
+			</script>
+	    </form>
+	</body>
+</html>

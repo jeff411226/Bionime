@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Bionime Add Nurse</title>
+		
+		<link rel="stylesheet" href="/webjars/bootstrap/3.3.7/css/bootstrap.css">
+		<link rel="stylesheet" href="/webjars/font-awesome/4.7.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="/css/style.css">
+		<link rel="stylesheet" href="/css/pace/themes/blue/pace-theme-loading-bar.css"/>
+	    <link rel="stylesheet" href="/css/toastr/toastr.min.css">
+		<link rel="stylesheet" href="/css/sweetalert2/sweetalert2.min.css">
+		
+		<script type="text/javascript" src="/js/beforeInit.js"></script>
+		<script type="text/javascript" src="/webjars/jquery/2.1.1/jquery.js"></script>
+		<script type="text/javascript" src="/webjars/bootstrap/3.3.7/js/bootstrap.js"></script>
+		<script type="text/javascript" src="/js/jqueryform/jquery.form.min.js"></script>
+		<script type="text/javascript" src="/js/pace/pace.min.js"></script>
+		<script type="text/javascript" src="/js/toastr/toastr.min.js"></script>
+		<script type="text/javascript" src="/js/sweetalert2/sweetalert2.min.js"></script>
+	    <script type="text/javascript" src="/js/generalFunction.js"></script>
+	    
+	    <script th:inline="javascript">
+	    	var stationList = [];
+		    $(document).ready(function () {
+		    	var empId = /*[[${empId}]]*/;
+		    	if (empId) {
+		    		ajaxPromise('/api/employee/' + empId, 'GET', null).then(function(response) {
+						var data = response.data;
+						$("#identifier").val(data.identifier);
+						$("#name").val(data.name);
+					}, function(error) {
+						console.log('reject.' + error);
+					});
+		    	}
+		    	
+		    	ajaxPromise('/api/stations', 'GET', null).then(function(response) {
+		    		stationList = response.data;
+		    		if (empId) {
+		    			return ajaxPromise('/api/station/condition?empId=' + empId, 'GET', null);
+		    		}
+		    	}).then(function(response) {
+		    		if (empId) {
+		    			var newStationList = [];
+			    		var empStationList = response.data;
+			    		for (var i = 0; i < stationList.length; i++) {
+			    			var appear = false;
+			    			for (var j = 0; j < empStationList.length; j++) {
+				    			if (stationList[i].id == empStationList[j].id) {
+				    				appear = true;
+				    				break;
+				    			}
+				    		}
+			    			if (!appear) {
+				    			newStationList.push(stationList[i]);
+			    			}
+			    		}
+			    		
+			    		newStationList.forEach(function(element) {
+							$('#stationList').append('<option value="' + element.id + '">' + element.name + '</option>');
+						});
+			    		empStationList.forEach(function(element) {
+							$('#empStationList').append('<option value="' + element.id + '">' + element.name + '</option>');
+						});
+		    		} else {
+		    			stationList.forEach(function(element) {
+							$('#stationList').append('<option value="' + element.id + '">' + element.name + '</option>');
+						});
+		    		}
+				}, function(error) {
+					console.log('reject.' + error);
+				});
+		    	
+		    	$(".addEmpBtn").click(function() {
+		    		var identifier = $("#identifier").val().trim();
+		    		var name = $("#name").val().trim();
+					if ("" != identifier && "" != name) {
+						var success = false;
+						var method = "POST";
+						var employeeURI = "/api/employee";
+						var stationEmployeeURI = "/api/stationEmployee";
+						var employeeData = {};
+						employeeData.identifier = identifier;
+						employeeData.name = name;
+						if (empId) {
+							method = "PUT";
+							employeeURI = "/api/employee/" + empId;
+							stationEmployeeURI = "/api/stationEmployee/condition?empId=" + empId;
+							employeeData.id = empId;
+						}
+						ajaxPromise(employeeURI, method, employeeData).then(function(response) {
+							var data = response.data;
+							if (data) {
+								success = true;
+								var empId = data.id;
+								var empStationList = [];
+								$("#empStationList option").each(function() {
+									var empStation = {};
+									empStation.stationId = $(this).val();
+									empStation.empId = empId;
+									empStationList.push(empStation);
+								});
+								return ajaxPromise(stationEmployeeURI, method, empStationList);
+							} else {
+								eipToast('員工編號重複');
+							}
+						}).then(function(response) {
+							if (success) {
+								if (empId) {
+									eipToast({message: '儲存成功', method: 'success'});
+								} else {
+									eipAlert({
+							  			text: '新增成功',
+							  			confirmButtonCallback : function() {
+							  				window.location.href='/';
+							  			}
+							  		});
+								}
+							}
+						}, function(error) {
+							console.log('reject.' + error);
+						});
+					} else {
+						eipToast('請輸入員工編號與護士姓名');
+					}
+				});
+		    	
+		    	$(".addStation").click(function() {
+		    		$("#stationList option:selected").each(function() {
+		    			$('#empStationList').append('<option value="' + $(this).val() + '">' + $(this).text() + '</option>');
+		    			$(this).remove();
+		    		});
+		    		sortOption("#empStationList");
+		    	});
+		    	
+		    	$(".removeStation").click(function() {
+		    		$("#empStationList option:selected").each(function() {
+		    			$('#stationList').append('<option value="' + $(this).val() + '">' + $(this).text() + '</option>');
+		    			$(this).remove();
+		    		});
+		    		sortOption("#stationList");
+		    	});
+			});
+
+		    function sortOption(selectName) {
+				var select = $(selectName);
+
+				if (select.length > 0) {
+					var selectedVal = select.val();
+					var $options = $('option', select);
+					var arrVals = [];
+					$options.each(function() {
+						arrVals.push({
+							text: $(this).text(),
+							val: $(this).val()
+						});
+					});
+					
+					//遞增排序
+					arrVals.sort(function(a, b) {
+						if (a.text > b.text) {
+							return 1;
+						} else if (a.text == b.text) {
+							return 0;
+						} else {
+							return -1;
+						}
+					});
+
+					//將排序後的結果，再塞回 $options 中
+					for (var i = 0, l = arrVals.length; i < l; i++) {
+						$($options[i]).val(arrVals[i].val).text(arrVals[i].text);
+					}
+
+					//指定被選取的選項
+					select.val(selectedVal);
+				}
+			}
+	    </script>
+	</head>
+	<body>
+		<form method="post" class="form-inline">
+            <div class="middle-box text-center">
+            	<div class="ibox-content">
+	            	<div class="row">
+						<button type="button" class="btn btn-sm col-md-6" onclick="window.location.href='/'" th:if="${empId==null}">返回</button>
+						<button type="button" class="btn btn-sm col-md-6" onclick="window.location.href='/empList'" th:if="${empId!=null}">返回</button>
+						<button type="button" class="addEmpBtn btn btn-success btn-sm col-md-6" th:if="${empId==null}">新增</button>
+						<button type="button" class="addEmpBtn btn btn-success btn-sm col-md-6" th:if="${empId!=null}">儲存</button>
+					</div>
+					<div class="form-group m-t-sm">
+						<label class="col-md-4 control-label">員工編號</label>
+						<div class="col-md-8">
+							<input type="text" class="form-control" id="identifier" name="identifier" >
+						</div>
+					</div>
+					<div class="form-group m-t-sm">
+						<label class="col-md-4 control-label">護士姓名</label>
+						<div class="col-md-8">
+							<input type="text" class="form-control" id="name" name="name" >
+						</div>
+					</div>
+					<div class="form-group m-t-sm">
+						<label class="col-md-4 control-label">分配站點</label>
+						<div class="col-md-8"></div>
+						<div class="row col-md-12 m-t-sm">
+							<div class="col-md-4">
+								<select multiple class="form-control" id="empStationList" style="width: 100%;"></select>
+							</div>
+							<div class="col-md-4">
+								<div class="m-t-sm"><a class="addStation"><i class="fa fa-arrow-left"></i> 加入</a></div>
+								<div class="m-t-sm"><a class="removeStation">移除 <i class="fa fa-arrow-right"></i></a></div>
+							</div>
+							<div class="col-md-4">
+								<select multiple class="form-control" id="stationList" style="width: 100%;"></select>
+							</div>
+						</div>
+					</div>
+				</div>
+            </div>
+	    </form>
+	</body>
+</html>

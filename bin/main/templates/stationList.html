@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+		<title>Bionime Station List</title>
+		
+		<link rel="stylesheet" href="/webjars/bootstrap/3.3.7/css/bootstrap.css">
+		<link rel="stylesheet" href="/webjars/font-awesome/4.7.0/css/font-awesome.min.css">
+		<link rel="stylesheet" href="/css/style.css">
+		<link rel="stylesheet" href="/css/pace/themes/blue/pace-theme-loading-bar.css"/>
+	    <link rel="stylesheet" href="/css/toastr/toastr.min.css">
+		<link rel="stylesheet" href="/css/sweetalert2/sweetalert2.min.css">
+		
+		<script type="text/javascript" src="/js/beforeInit.js"></script>
+		<script type="text/javascript" src="/webjars/jquery/2.1.1/jquery.js"></script>
+		<script type="text/javascript" src="/webjars/bootstrap/3.3.7/js/bootstrap.js"></script>
+		<script type="text/javascript" src="/js/moment/moment.min.js"></script>
+		<script type="text/javascript" src="/js/jqueryform/jquery.form.min.js"></script>
+		<script type="text/javascript" src="/js/javaScriptTemplates/tmpl.min.js"></script>
+		<script type="text/javascript" src="/js/pace/pace.min.js"></script>
+		<script type="text/javascript" src="/js/toastr/toastr.min.js"></script>
+		<script type="text/javascript" src="/js/sweetalert2/sweetalert2.min.js"></script>
+	    <script type="text/javascript" src="/js/generalFunction.js"></script>
+	    
+	    <script type="text/javascript">
+		    $(document).ready(function() {
+		    	ajaxPromise('/api/stations', 'GET', null).then(function(response) {
+	        		var data = response.data;
+	   		    	$(".stationTbody").append(tmpl("stationTmpl", data));
+				}, function(error) {
+					console.log('reject.' + error);
+				});
+		    });
+		    
+		    function deleteStation(stationId) {
+		    	ajaxPromise('/api/station/' + stationId, 'DELETE', null).then(function(response) {
+		    		return ajaxPromise('/api/stations', 'GET', null);
+				}).then(function(response) {
+					eipToast({message: '刪除成功', method: 'success'});
+					
+					var data = response.data;
+					$(".stationTbody").html("");
+	   		    	$(".stationTbody").append(tmpl("stationTmpl", data));
+				}, function(error) {
+					console.log('reject.' + error);
+				});
+		    }
+		    
+		    function toStationInfo(stationId) {
+		    	$("#stationId").val(stationId);
+		    	$("#stationInfoForm").submit();
+			    return false;
+		    }
+	    </script>
+	</head>
+
+	<body>
+		<form method="post" class="form-inline">
+			<div class="col-md-6 white-bg col-md-offset-3 m-t-xl">
+            	<div class="row">
+					<button type="button" class="btn btn-sm col-md-6 col-md-offset-6" onclick="window.location.href='/'">返回</button>
+				</div>
+				<div class="table-responsive m-t-sm">
+					<table class="table table-striped table-sm">
+						<thead>
+							<tr>
+								<th>站點</th>
+								<th>修改時間</th>
+								<th>動作</th>
+							</tr>
+						</thead>
+						<tbody class="stationTbody"></tbody>
+					</table>
+				</div>
+			</div>
+	    </form>
+	    
+	    <form id="stationInfoForm" method="post" action="/stationInfo">
+	    	<input type="hidden" id="stationId" name="stationId"/>
+	    </form>
+	    
+	    <script type="text/x-tmpl" id="stationTmpl">
+		{% for (var i = 0, station; station=o[i]; i++) { %}
+		<tr>
+			<td>{%=station.name%}</td>
+			<td>{%=moment(station.updateTime).format('YYYY/MM/DD HH:mm:ss')%}</td>
+			<td>
+				<a class="btn btn-sm btn-success" onclick="toStationInfo({%=station.id%})">View</a>
+				<a class="btn btn-sm btn-danger" onclick="deleteStation({%=station.id%})">Del</a>
+			</td>
+		</tr>
+		{% } %}
+		</script>
+	</body>
+</html>
