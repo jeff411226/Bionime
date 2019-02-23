@@ -6,7 +6,7 @@
 運行環境步驟：
 1. 安裝 Java JDK (8)
 2. 安裝 MySQL 或 MariaDB 數據庫
-3. 初始化資料庫<br>
+3. 建立數據庫(hospital)後再初始化資料庫<br>
   於 bionime/src/main/resources/sql/create.sql 執行 SQL
 4. 運行環境<br>
   下載 HospitalStation.war 與 application.properties 參數配置檔<br>
